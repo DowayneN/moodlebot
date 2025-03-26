@@ -1,20 +1,30 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>moodlebot-chatwave</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
+    <title>MoodleBot - AI-powered Educational Assistant</title>
+    <meta name="description" content="AI-powered educational chatbot that learns from your data" />
+    <meta name="author" content="MoodleBot" />
 
-    <meta property="og:title" content="Lovable Generated Project" />
-    <meta property="og:description" content="Lovable Generated Project" />
+    <meta property="og:title" content="MoodleBot" />
+    <meta property="og:description" content="AI-powered educational chatbot that learns from your data" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta property="og:image" content="/lovable-uploads/d333523b-6a95-46ae-b24d-cb5fb63ce7a5.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:site" content="@moodlebot" />
+    <meta name="twitter:image" content="/lovable-uploads/d333523b-6a95-46ae-b24d-cb5fb63ce7a5.png" />
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#FF8800" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" href="/lovable-uploads/d333523b-6a95-46ae-b24d-cb5fb63ce7a5.png" />
+    <link rel="apple-touch-icon" href="/lovable-uploads/d333523b-6a95-46ae-b24d-cb5fb63ce7a5.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MoodleBot" />
   </head>
 
   <body>
@@ -22,5 +32,18 @@
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => {
+              console.log('ServiceWorker registration successful');
+            })
+            .catch(error => {
+              console.log('ServiceWorker registration failed: ', error);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
