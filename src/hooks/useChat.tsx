@@ -77,14 +77,39 @@ export const useChat = () => {
       };
       
       setMessages(prev => [...prev, botMessage]);
+      
+      // Check for error messages in the response and show toasts for better UX
+      if (response.includes("I'm having trouble processing your request due to the size")) {
+        toast({
+          title: "Knowledge Base Too Large",
+          description: "Try uploading smaller files or asking a more specific question.",
+          variant: "destructive",
+        });
+      } else if (response.includes("invalid_api_key") || response.includes("The API key appears to be invalid")) {
+        toast({
+          title: "Invalid API Key",
+          description: "Please check your OpenAI API key in settings.",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       
       toast({
         title: "Error",
-        description: "Failed to get a response. Please try again.",
+        description: "Failed to get a response. Please try again with a more specific question.",
         variant: "destructive",
       });
+      
+      // Add an error message in the chat
+      const errorMessage: Message = {
+        id: uuidv4(),
+        content: "Sorry, I encountered an error processing your request. Please try with a more specific question or check your API key.",
+        role: 'assistant',
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }

@@ -21,6 +21,7 @@ interface ChatCompletionResponse {
 class OpenAIService {
   private knowledgeBase: KnowledgeBase | null = null;
   private apiKey: string = '';
+  private maxContextLength: number = 10000; // Limit context to prevent token limit errors
 
   setKnowledgeBase(knowledgeBase: KnowledgeBase) {
     this.knowledgeBase = knowledgeBase;
@@ -28,6 +29,23 @@ class OpenAIService {
 
   setApiKey(apiKey: string) {
     this.apiKey = apiKey;
+  }
+
+  private truncateContext(text: string, maxLength: number): string {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  }
+
+  private processCSVData(csvData: any[]): string {
+    if (!csvData || csvData.length === 0) return '';
+    
+    // Extract only the most relevant data
+    const relevantEntries = csvData.slice(0, 50); // Limit to first 50 rows
+    const headers = Object.keys(relevantEntries[0]);
+    
+    return relevantEntries.map(row => {
+      return headers.map(header => `${header}: ${row[header]}`).join(', ');
+    }).join('\n');
   }
 
   async getCompletion(prompt: string): Promise<string> {
@@ -39,14 +57,15 @@ class OpenAIService {
       return "Please upload knowledge base files first.";
     }
 
-    // Build context from knowledge base
+    // Build context from knowledge base - with length limits
     let context = '';
     if (this.knowledgeBase.textContent) {
-      context += `Text Content: ${this.knowledgeBase.textContent}\n\n`;
+      context += `Text Content: ${this.truncateContext(this.knowledgeBase.textContent, this.maxContextLength)}\n\n`;
     }
 
     if (this.knowledgeBase.csvData) {
-      context += `CSV Data: ${JSON.stringify(this.knowledgeBase.csvData).substring(0, 5000)}...\n\n`;
+      const processedCsvData = this.processCSVData(this.knowledgeBase.csvData);
+      context += `CSV Data: ${this.truncateContext(processedCsvData, 5000)}\n\n`;
     }
 
     try {
@@ -78,6 +97,16 @@ class OpenAIService {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('OpenAI API error:', errorData);
+        
+        // Handle common error cases
+        if (errorData.error?.type === 'tokens' || errorData.error?.code === 'rate_limit_exceeded') {
+          return "I'm having trouble processing your request due to the size of the knowledge base. Try uploading smaller files or asking a more specific question.";
+        }
+        
+        if (errorData.error?.code === 'invalid_api_key') {
+          return "The API key appears to be invalid. Please check your OpenAI API key in settings.";
+        }
+        
         return `Error: ${errorData.error?.message || 'Failed to get a response from OpenAI'}`;
       }
 
@@ -85,7 +114,7 @@ class OpenAIService {
       return data.choices[0].message.content;
     } catch (error) {
       console.error('Error calling OpenAI API:', error);
-      return "Sorry, I encountered an error processing your request. Please check your API key and try again.";
+      return "Sorry, I encountered an error processing your request. Please check your API key and try again with a more specific question.";
     }
   }
 }
