@@ -21,7 +21,7 @@ export const useChat = () => {
     
     toast({
       title: "Knowledge base updated",
-      description: "Your data has been successfully loaded.",
+      description: "Your data has been processed and embedded for efficient retrieval.",
     });
   }, [toast]);
 
@@ -67,7 +67,20 @@ export const useChat = () => {
     setLoading(true);
     
     try {
+      // Add a small processing message to improve UX
+      const processingMessage: Message = {
+        id: uuidv4(),
+        content: "Searching knowledge base for relevant information...",
+        role: 'assistant',
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, processingMessage]);
+      
       const response = await openAIService.getCompletion(content);
+      
+      // Replace the processing message with the actual response
+      setMessages(prev => prev.filter(m => m.id !== processingMessage.id));
       
       const botMessage: Message = {
         id: uuidv4(),

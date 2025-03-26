@@ -1,5 +1,6 @@
 
 import { KnowledgeBase } from '../types';
+import { chunkText, createSimpleEmbedding, findRelevantChunks } from '../utils/textProcessing';
 
 interface ChatCompletionRequest {
   model: string;
@@ -18,17 +19,52 @@ interface ChatCompletionResponse {
   }[];
 }
 
+interface TextChunk {
+  text: string;
+  embedding: number[];
+}
+
 class OpenAIService {
   private knowledgeBase: KnowledgeBase | null = null;
   private apiKey: string = '';
-  private maxContextLength: number = 10000; // Limit context to prevent token limit errors
-
+  private maxContextLength: number = 8000; // Reduced to leave room for the query and response
+  private textChunks: TextChunk[] = [];
+  private csvChunks: TextChunk[] = [];
+  
   setKnowledgeBase(knowledgeBase: KnowledgeBase) {
     this.knowledgeBase = knowledgeBase;
+    
+    // Process and embed text content when the knowledge base is set
+    this.processKnowledgeBase();
   }
-
+  
   setApiKey(apiKey: string) {
     this.apiKey = apiKey;
+  }
+  
+  private processKnowledgeBase() {
+    if (!this.knowledgeBase) return;
+    
+    // Process text content into chunks with embeddings
+    if (this.knowledgeBase.textContent) {
+      const rawChunks = chunkText(this.knowledgeBase.textContent);
+      this.textChunks = rawChunks.map(chunk => ({
+        text: chunk,
+        embedding: createSimpleEmbedding(chunk)
+      }));
+      console.log(`Processed ${this.textChunks.length} text chunks`);
+    }
+    
+    // Process CSV data into chunks with embeddings
+    if (this.knowledgeBase.csvData && this.knowledgeBase.csvData.length > 0) {
+      const processedCsvData = this.processCSVData(this.knowledgeBase.csvData);
+      const rawChunks = chunkText(processedCsvData, 500); // Smaller chunks for CSV data
+      this.csvChunks = rawChunks.map(chunk => ({
+        text: chunk,
+        embedding: createSimpleEmbedding(chunk)
+      }));
+      console.log(`Processed ${this.csvChunks.length} CSV chunks`);
+    }
   }
 
   private truncateContext(text: string, maxLength: number): string {
@@ -40,12 +76,33 @@ class OpenAIService {
     if (!csvData || csvData.length === 0) return '';
     
     // Extract only the most relevant data
-    const relevantEntries = csvData.slice(0, 50); // Limit to first 50 rows
+    const relevantEntries = csvData.slice(0, 100); // Increased to get more data
     const headers = Object.keys(relevantEntries[0]);
     
     return relevantEntries.map(row => {
       return headers.map(header => `${header}: ${row[header]}`).join(', ');
     }).join('\n');
+  }
+  
+  private getRelevantContext(query: string): string {
+    // Combine chunks from both text and CSV data
+    const allChunks = [...this.textChunks, ...this.csvChunks];
+    if (allChunks.length === 0) {
+      return this.knowledgeBase?.textContent || '';
+    }
+    
+    // Retrieve the most relevant chunks for the query
+    const relevantChunks = findRelevantChunks(query, allChunks, 5);
+    
+    // Combine the chunks into a single context
+    let context = relevantChunks.join('\n\n');
+    
+    // Truncate if still too long
+    if (context.length > this.maxContextLength) {
+      context = this.truncateContext(context, this.maxContextLength);
+    }
+    
+    return context;
   }
 
   async getCompletion(prompt: string): Promise<string> {
@@ -57,24 +114,17 @@ class OpenAIService {
       return "Please upload knowledge base files first.";
     }
 
-    // Build context from knowledge base - with length limits
-    let context = '';
-    if (this.knowledgeBase.textContent) {
-      context += `Text Content: ${this.truncateContext(this.knowledgeBase.textContent, this.maxContextLength)}\n\n`;
-    }
-
-    if (this.knowledgeBase.csvData) {
-      const processedCsvData = this.processCSVData(this.knowledgeBase.csvData);
-      context += `CSV Data: ${this.truncateContext(processedCsvData, 5000)}\n\n`;
-    }
-
     try {
+      // Get relevant context based on the query
+      const relevantContext = this.getRelevantContext(prompt);
+      console.log(`Retrieved ${relevantContext.length} characters of relevant context`);
+      
       const systemMessage = `You are MoodleBot, an educational assistant that helps users with their questions. 
       Use the following knowledge base to answer questions. If you don't know the answer based on the provided 
       information, say so and avoid making up information.
       
       Knowledge Base Context:
-      ${context}`;
+      ${relevantContext}`;
 
       const requestBody: ChatCompletionRequest = {
         model: "gpt-4o-mini", // Using a model that supports context
@@ -82,7 +132,7 @@ class OpenAIService {
           { role: "system", content: systemMessage },
           { role: "user", content: prompt }
         ],
-        temperature: 0.7
+        temperature: 0.5 // Reduced for more factual responses
       };
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
