@@ -38,6 +38,24 @@ export const useChat = () => {
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return;
     
+    if (!apiKey) {
+      toast({
+        title: "API Key Required",
+        description: "Please set your OpenAI API key in the settings tab.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!knowledgeBase.isLoaded) {
+      toast({
+        title: "Knowledge Base Required",
+        description: "Please upload at least one file to create a knowledge base.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const userMessage: Message = {
       id: uuidv4(),
       content,
@@ -70,7 +88,7 @@ export const useChat = () => {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, apiKey, knowledgeBase]);
 
   const clearChat = useCallback(() => {
     setMessages([]);
@@ -81,6 +99,9 @@ export const useChat = () => {
     });
   }, [toast]);
 
+  // Check if chat is ready to use
+  const isChatReady = apiKey && knowledgeBase.isLoaded;
+
   return {
     messages,
     loading,
@@ -89,6 +110,7 @@ export const useChat = () => {
     sendMessage,
     updateKnowledgeBase,
     updateApiKey,
-    clearChat
+    clearChat,
+    isChatReady
   };
 };

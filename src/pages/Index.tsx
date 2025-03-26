@@ -21,7 +21,8 @@ const Index = () => {
     sendMessage, 
     updateKnowledgeBase, 
     updateApiKey,
-    clearChat 
+    clearChat,
+    isChatReady
   } = useChat();
   
   const [tempApiKey, setTempApiKey] = useState('');
@@ -155,17 +156,14 @@ const Index = () => {
                     </Alert>
                   )}
 
-                  <div className="mt-4 p-4 bg-muted rounded-md">
-                    <h3 className="font-medium mb-2 flex items-center">
-                      <Info className="h-4 w-4 mr-2" />
-                      Note for Demo
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      This is a demo application. In a real implementation, you would need to provide 
-                      a valid OpenAI API key. For demonstration purposes, the chatbot will provide 
-                      simulated responses without calling the actual API.
-                    </p>
-                  </div>
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>About API Keys</AlertTitle>
+                    <AlertDescription className="text-sm">
+                      You will need a valid OpenAI API key to use this feature.
+                      Your API key is stored only in your browser's memory and is never sent to our servers.
+                    </AlertDescription>
+                  </Alert>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -185,7 +183,7 @@ const Index = () => {
                 messages={messages}
                 loading={loading}
                 onSendMessage={sendMessage}
-                isKnowledgeBaseLoaded={knowledgeBase.isLoaded && !!apiKey}
+                isKnowledgeBaseLoaded={isChatReady}
               />
             </CardContent>
           </Card>

@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Message as MessageType } from '@/types';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, AlertCircle } from 'lucide-react';
 import { formatRelative } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ChatInterfaceProps {
   messages: MessageType[];
@@ -52,10 +53,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <div className="flex flex-col items-center justify-center h-full text-center opacity-70">
             <div className="max-w-md py-8 animate-float">
               <h2 className="text-2xl font-bold text-moodle-black mb-4">Welcome to MoodleBot</h2>
+              {!isKnowledgeBaseLoaded && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  <AlertDescription>
+                    Please upload both text and CSV files to create a knowledge base, and set your OpenAI API key.
+                  </AlertDescription>
+                </Alert>
+              )}
               <p className="text-gray-600 mb-6">
                 {isKnowledgeBaseLoaded 
                   ? "I've processed your knowledge base. Ask me a question!" 
-                  : "Please upload your text and CSV files to get started."}
+                  : "Upload your files in the Data Files tab and set your API key in the Settings tab to start."}
               </p>
             </div>
           </div>
@@ -98,7 +107,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isKnowledgeBaseLoaded ? "Ask a question..." : "Upload files to start chatting..."}
+            placeholder={isKnowledgeBaseLoaded ? "Ask a question..." : "Upload files and set API key to start chatting..."}
             disabled={!isKnowledgeBaseLoaded}
             className="input-field resize-none h-[42px] max-h-32 flex-1"
             rows={1}

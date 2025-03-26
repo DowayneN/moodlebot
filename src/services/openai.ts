@@ -46,7 +46,7 @@ class OpenAIService {
     }
 
     if (this.knowledgeBase.csvData) {
-      context += `CSV Data: ${JSON.stringify(this.knowledgeBase.csvData).substring(0, 1000)}...\n\n`;
+      context += `CSV Data: ${JSON.stringify(this.knowledgeBase.csvData).substring(0, 5000)}...\n\n`;
     }
 
     try {
@@ -66,18 +66,6 @@ class OpenAIService {
         temperature: 0.7
       };
 
-      // In a real application, make an actual API call
-      // This is a simulated response for demo purposes
-      if (prompt.toLowerCase().includes('hello') || prompt.toLowerCase().includes('hi')) {
-        return "Hello! I'm MoodleBot. I've processed your knowledge base data. How can I help you with your educational queries?";
-      }
-
-      if (prompt.toLowerCase().includes('data') || prompt.toLowerCase().includes('loaded')) {
-        return `I've loaded the following data: ${context.substring(0, 150)}... Ask me questions about this content!`;
-      }
-
-      // For an actual implementation, uncomment this code and use a real API key
-      /*
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -87,15 +75,17 @@ class OpenAIService {
         body: JSON.stringify(requestBody)
       });
 
-      const data: ChatCompletionResponse = await response.json();
-      return data.choices[0].message.content;
-      */
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('OpenAI API error:', errorData);
+        return `Error: ${errorData.error?.message || 'Failed to get a response from OpenAI'}`;
+      }
 
-      // Simulated response
-      return "Based on the knowledge base you've provided, I can help answer this question. The answer would depend on the actual content of your uploaded files. In a real implementation, I would use the OpenAI API to generate a response based on your specific data.";
+      const data = await response.json();
+      return data.choices[0].message.content;
     } catch (error) {
       console.error('Error calling OpenAI API:', error);
-      return "Sorry, I encountered an error processing your request.";
+      return "Sorry, I encountered an error processing your request. Please check your API key and try again.";
     }
   }
 }
