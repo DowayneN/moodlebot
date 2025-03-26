@@ -5,12 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Switch } from "@/components/ui/switch";
 import FileUpload from '@/components/FileUpload';
 import ChatInterface from '@/components/ChatInterface';
 import Logo from '@/components/Logo';
 import { useChat } from '@/hooks/useChat';
 import { summarizeData } from '@/utils/fileProcessing';
-import { AlertCircle, Info, Trash2, Settings, FileText, Database, Key } from 'lucide-react';
+import { AlertCircle, Info, Trash2, Settings, FileText, Database, Key, BrainCircuit } from 'lucide-react';
 
 const Index = () => {
   const { 
@@ -18,9 +19,11 @@ const Index = () => {
     loading, 
     knowledgeBase, 
     apiKey,
+    evaluationMode,
     sendMessage, 
     updateKnowledgeBase, 
     updateApiKey,
+    toggleEvaluationMode,
     clearChat,
     isChatReady
   } = useChat();
@@ -55,6 +58,17 @@ const Index = () => {
             </div>
           </div>
           <div className="flex space-x-2">
+            {isChatReady && (
+              <div className="flex items-center space-x-2 mr-4">
+                <span className="text-sm font-medium">AI Readiness Evaluation:</span>
+                <Switch 
+                  checked={evaluationMode} 
+                  onCheckedChange={toggleEvaluationMode} 
+                  id="evaluation-mode"
+                />
+                {evaluationMode && <BrainCircuit className="h-4 w-4 text-blue-600" />}
+              </div>
+            )}
             <Button 
               variant="outline" 
               className="text-sm"
@@ -115,6 +129,36 @@ const Index = () => {
                   )}
                 </CardContent>
               </Card>
+              
+              {isChatReady && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <BrainCircuit className="h-5 w-5 mr-2 text-blue-600" />
+                      AI Readiness Evaluation
+                    </CardTitle>
+                    <CardDescription>
+                      Assess your organization's readiness for AI implementation
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <p className="text-sm">
+                        Toggle the evaluation mode to have the chatbot ask structured questions that 
+                        evaluate your organization's AI readiness.
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Evaluation Mode:</span>
+                        <Switch 
+                          checked={evaluationMode} 
+                          onCheckedChange={toggleEvaluationMode} 
+                          id="evaluation-mode-sidebar"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
             
             <TabsContent value="settings" className="mt-4">
@@ -174,8 +218,17 @@ const Index = () => {
           <Card className="flex flex-col flex-1 overflow-hidden">
             <CardHeader className="border-b bg-moodle-gray/30 py-3">
               <CardTitle className="flex items-center text-lg">
-                <FileText className="h-5 w-5 mr-2" />
-                MoodleBot Chat
+                {evaluationMode ? (
+                  <>
+                    <BrainCircuit className="h-5 w-5 mr-2 text-blue-600" />
+                    AI Readiness Evaluation
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-5 w-5 mr-2" />
+                    MoodleBot Chat
+                  </>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0 flex-1 flex overflow-hidden">
@@ -184,6 +237,7 @@ const Index = () => {
                 loading={loading}
                 onSendMessage={sendMessage}
                 isKnowledgeBaseLoaded={isChatReady}
+                evaluationMode={evaluationMode}
               />
             </CardContent>
           </Card>

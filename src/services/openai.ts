@@ -1,6 +1,6 @@
-
 import { KnowledgeBase } from '../types';
 import { chunkText, createSimpleEmbedding, findRelevantChunks } from '../utils/textProcessing';
+import { evaluationQuestions, getNextQuestion, generateRecommendations, evaluateReadinessLevel } from '../utils/aiReadinessEvaluation';
 
 interface ChatCompletionRequest {
   model: string;
@@ -30,6 +30,17 @@ class OpenAIService {
   private maxContextLength: number = 8000; // Reduced to leave room for the query and response
   private textChunks: TextChunk[] = [];
   private csvChunks: TextChunk[] = [];
+  private isEvaluationMode: boolean = false;
+  private evaluationState: {
+    inProgress: boolean;
+    askedQuestions: string[];
+    currentTopicId?: string;
+    answers: Record<string, string>;
+  } = {
+    inProgress: false,
+    askedQuestions: [],
+    answers: {}
+  };
   
   setKnowledgeBase(knowledgeBase: KnowledgeBase) {
     this.knowledgeBase = knowledgeBase;
@@ -40,6 +51,28 @@ class OpenAIService {
   
   setApiKey(apiKey: string) {
     this.apiKey = apiKey;
+  }
+  
+  toggleEvaluationMode(enabled: boolean) {
+    this.isEvaluationMode = enabled;
+    
+    if (enabled) {
+      // Reset evaluation state when entering evaluation mode
+      this.evaluationState = {
+        inProgress: true,
+        askedQuestions: [],
+        answers: {}
+      };
+    } else {
+      // Clear evaluation state when exiting
+      this.evaluationState.inProgress = false;
+    }
+    
+    return this.isEvaluationMode;
+  }
+  
+  getEvaluationState() {
+    return this.evaluationState;
   }
   
   private processKnowledgeBase() {
@@ -105,6 +138,65 @@ class OpenAIService {
     return context;
   }
 
+  private handleEvaluationMode(prompt: string): string {
+    // Check if this is the start of the evaluation
+    if (!this.evaluationState.inProgress || this.evaluationState.askedQuestions.length === 0) {
+      this.evaluationState.inProgress = true;
+      
+      // Get the first question
+      const firstQuestion = evaluationQuestions[0];
+      this.evaluationState.currentTopicId = firstQuestion.id;
+      this.evaluationState.askedQuestions.push(firstQuestion.id);
+      
+      return `I'd like to evaluate your organization's AI readiness by asking a few questions. This will help me provide personalized recommendations based on your situation.\n\n${firstQuestion.question}`;
+    }
+    
+    // Store the user's answer for the current question
+    if (this.evaluationState.currentTopicId) {
+      // Check if this is a follow-up answer
+      const isFollowUp = this.evaluationState.askedQuestions.includes(`${this.evaluationState.currentTopicId}-followup`);
+      
+      if (isFollowUp) {
+        // Combine primary and follow-up answers
+        this.evaluationState.answers[this.evaluationState.currentTopicId] += " " + prompt;
+      } else {
+        // Store the primary answer
+        this.evaluationState.answers[this.evaluationState.currentTopicId] = prompt;
+        
+        // Mark the follow-up as asked if we're going to ask it
+        const currentQuestion = evaluationQuestions.find(q => q.id === this.evaluationState.currentTopicId);
+        if (currentQuestion && currentQuestion.followUp) {
+          this.evaluationState.askedQuestions.push(`${this.evaluationState.currentTopicId}-followup`);
+          return currentQuestion.followUp;
+        }
+      }
+    }
+    
+    // Get the next question
+    const nextQuestion = getNextQuestion(this.evaluationState.askedQuestions);
+    
+    // If we have another question, ask it
+    if (nextQuestion) {
+      // Find which question this is
+      const questionObj = evaluationQuestions.find(q => q.question === nextQuestion);
+      if (questionObj) {
+        this.evaluationState.currentTopicId = questionObj.id;
+        this.evaluationState.askedQuestions.push(questionObj.id);
+      }
+      
+      return `Thank you for that information. ${nextQuestion}`;
+    }
+    
+    // If we've asked all questions, provide an evaluation
+    const readinessLevel = evaluateReadinessLevel(this.evaluationState.answers);
+    const recommendations = generateRecommendations(this.evaluationState.answers, this.knowledgeBase?.textContent);
+    
+    // Reset the evaluation for next time
+    this.evaluationState.inProgress = false;
+    
+    return `Thank you for answering my questions. Based on our conversation, your organization is at the **${readinessLevel}** stage of AI readiness.\n\n${recommendations}\n\nIs there anything specific you'd like to know about implementing AI in your organization?`;
+  }
+
   async getCompletion(prompt: string): Promise<string> {
     if (!this.apiKey) {
       return "Please set your OpenAI API key in the settings.";
@@ -115,6 +207,12 @@ class OpenAIService {
     }
 
     try {
+      // Check if we're in evaluation mode
+      if (this.isEvaluationMode) {
+        return this.handleEvaluationMode(prompt);
+      }
+      
+      // Handle normal mode with knowledge base
       // Get relevant context based on the query
       const relevantContext = this.getRelevantContext(prompt);
       console.log(`Retrieved ${relevantContext.length} characters of relevant context`);

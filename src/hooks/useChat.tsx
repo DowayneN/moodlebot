@@ -10,6 +10,7 @@ export const useChat = () => {
   const [loading, setLoading] = useState(false);
   const [knowledgeBase, setKnowledgeBase] = useState<KnowledgeBase>({ isLoaded: false });
   const [apiKey, setApiKey] = useState('');
+  const [evaluationMode, setEvaluationMode] = useState(false);
   const { toast } = useToast();
 
   const updateKnowledgeBase = useCallback((newData: Partial<KnowledgeBase>) => {
@@ -34,6 +35,29 @@ export const useChat = () => {
       description: "Your OpenAI API key has been set.",
     });
   }, [toast]);
+
+  const toggleEvaluationMode = useCallback(() => {
+    const newMode = !evaluationMode;
+    setEvaluationMode(newMode);
+    openAIService.toggleEvaluationMode(newMode);
+    
+    // Clear messages when entering evaluation mode
+    if (newMode) {
+      setMessages([]);
+      
+      toast({
+        title: "AI Readiness Evaluation Mode Activated",
+        description: "I'll ask questions to assess your organization's AI readiness.",
+      });
+    } else {
+      toast({
+        title: "Returning to Standard Chat Mode",
+        description: "You can now ask any questions about the knowledge base.",
+      });
+    }
+    
+    return newMode;
+  }, [evaluationMode, toast]);
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return;
@@ -70,7 +94,9 @@ export const useChat = () => {
       // Add a small processing message to improve UX
       const processingMessage: Message = {
         id: uuidv4(),
-        content: "Searching knowledge base for relevant information...",
+        content: evaluationMode 
+          ? "Analyzing your response..." 
+          : "Searching knowledge base for relevant information...",
         role: 'assistant',
         timestamp: new Date()
       };
@@ -126,7 +152,7 @@ export const useChat = () => {
     } finally {
       setLoading(false);
     }
-  }, [toast, apiKey, knowledgeBase]);
+  }, [toast, apiKey, knowledgeBase, evaluationMode]);
 
   const clearChat = useCallback(() => {
     setMessages([]);
@@ -145,9 +171,11 @@ export const useChat = () => {
     loading,
     knowledgeBase,
     apiKey,
+    evaluationMode,
     sendMessage,
     updateKnowledgeBase,
     updateApiKey,
+    toggleEvaluationMode,
     clearChat,
     isChatReady
   };
