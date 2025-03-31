@@ -1,90 +1,48 @@
-# Welcome to your Lovable project
+# MoodleBot ChatWave
 
-## Project info
+An AI-powered chatbot interface for Moodle, built with modern web technologies.
 
-**URL**: https://lovable.dev/projects/133ffede-0cb3-4863-95a7-e54fbb8542c7
+## Prerequisites
 
-## How can I edit this code?
+Before you begin, ensure you have the following installed:
+- [Git](https://git-scm.com/downloads) (version 2.x or higher)
+- [Node.js](https://nodejs.org/) (version 16.x or higher)
+- [npm](https://www.npmjs.com/) (usually comes with Node.js)
+- A text editor or IDE (e.g., [VS Code](https://code.visualstudio.com/), [WebStorm](https://www.jetbrains.com/webstorm/))
+- A modern web browser (Chrome, Firefox, Safari, or Edge)
 
-There are several ways of editing your application.
+You'll also need:
+- An [OpenAI account](https://platform.openai.com/signup) with API access
+- A [Pinecone account](https://app.pinecone.io/) for vector storage
 
-**Use Lovable**
+## Technologies Used
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/133ffede-0cb3-4863-95a7-e54fbb8542c7) and start prompting.
+This project is built with:
+- [Vite](https://vitejs.dev/) - Next Generation Frontend Tooling
+- [TypeScript](https://www.typescriptlang.org/) - JavaScript with syntax for types
+- [React](https://reactjs.org/) - A JavaScript library for building user interfaces
+- [shadcn/ui](https://ui.shadcn.com/) - Re-usable components built with Radix UI and Tailwind CSS
+- [Tailwind CSS](https://tailwindcss.com/) - A utility-first CSS framework
 
-Changes made via Lovable will be committed automatically to this repo.
+## Getting Started
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with .
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/133ffede-0cb3-4863-95a7-e54fbb8542c7) and click on Share -> Publish.
-
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
-
-## Environment Setup
-
-This project requires API keys from OpenAI and Pinecone to function properly. Follow these steps to set up your environment:
-
-1. Clone the repository and install dependencies:
+1. Clone the repository:
    ```sh
-   git clone <YOUR_REPOSITORY_URL>
+   git clone https://github.com/DowayneN/moodlebot-chatwave.git
    cd moodlebot-chatwave
+   ```
+
+2. Install dependencies:
+   ```sh
    npm install
    ```
 
-2. Copy the example environment file:
+3. Copy the example environment file:
    ```sh
    cp .env.example .env
    ```
 
-3. Get your API keys:
+4. Get your API keys:
    - **OpenAI API Key**: 
      - Visit [OpenAI's API Keys page](https://platform.openai.com/api-keys)
      - Click "Create new secret key"
@@ -96,19 +54,64 @@ This project requires API keys from OpenAI and Pinecone to function properly. Fo
      - Create a new key if needed
      - Copy your API key
 
-4. Update your `.env` file with your API keys:
+5. Update your `.env` file with your API keys:
    ```sh
    VITE_OPENAI_API_KEY=your-openai-api-key-here
    VITE_PINECONE_API_KEY=your-pinecone-api-key-here
    ```
 
-5. Start the development server:
+6. Start the development server:
    ```sh
    npm run dev
    ```
+
+7. Open your browser and visit `http://localhost:5173` (or the URL shown in your terminal)
+
+## Development
+
+### Available Scripts
+
+- `npm run dev` - Start the development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview the production build locally
+
+### Project Structure
+
+```
+moodlebot-chatwave/
+├── src/
+│   ├── components/    # React components
+│   ├── hooks/        # Custom React hooks
+│   ├── services/     # API and service integrations
+│   ├── utils/        # Utility functions
+│   └── pages/        # Page components
+├── public/           # Static assets
+└── ...config files
+```
+
+## Deployment
+
+You can deploy this application using any static site hosting service. We recommend:
+- [Vercel](https://vercel.com/)
+- [Netlify](https://www.netlify.com/)
+- [GitHub Pages](https://pages.github.com/)
+
+Remember to set up your environment variables (API keys) in your hosting platform's settings.
 
 ⚠️ **Important Security Notes**: 
 - Never commit your `.env` file or share your API keys
 - The `.env` file is listed in `.gitignore` to prevent accidental commits
 - If you accidentally expose your API keys, immediately rotate them in your OpenAI and Pinecone dashboards
-- For production deployment, set environment variables in your hosting platform (e.g., Netlify, Vercel) rather than using a .env file
+- For production deployment, set environment variables in your hosting platform rather than using a .env file
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
