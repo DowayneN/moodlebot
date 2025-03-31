@@ -1,9 +1,9 @@
-
 import { useState, useCallback } from 'react';
 import { Message, KnowledgeBase } from '../types';
 import { openAIService } from '../services/openai';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/components/ui/use-toast';
+import { pineconeService } from '../services/pinecone';
 
 export const useChat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -13,17 +13,30 @@ export const useChat = () => {
   const [evaluationMode, setEvaluationMode] = useState(false);
   const { toast } = useToast();
 
-  const updateKnowledgeBase = useCallback((newData: Partial<KnowledgeBase>) => {
-    setKnowledgeBase(prev => {
-      const updated = { ...prev, ...newData, isLoaded: true };
-      openAIService.setKnowledgeBase(updated);
-      return updated;
-    });
-    
-    toast({
-      title: "Knowledge base updated",
-      description: "Your data has been processed and embedded for efficient retrieval.",
-    });
+  const updateKnowledgeBase = useCallback(async (newData: Partial<KnowledgeBase>) => {
+    try {
+      if (!pineconeService.isReady()) {
+        throw new Error('Pinecone is not initialized. Please wait a moment and try again.');
+      }
+
+      setKnowledgeBase(prev => {
+        const updated = { ...prev, ...newData, isLoaded: true };
+        openAIService.setKnowledgeBase(updated);
+        return updated;
+      });
+      
+      toast({
+        title: "Knowledge base updated",
+        description: "Your data has been processed and embedded for efficient retrieval.",
+      });
+    } catch (error) {
+      console.error('Error updating knowledge base:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update knowledge base",
+        variant: "destructive",
+      });
+    }
   }, [toast]);
 
   const updateApiKey = useCallback((key: string) => {
@@ -45,6 +58,16 @@ export const useChat = () => {
     if (newMode) {
       setMessages([]);
       
+      // Add initial evaluation message
+      const initialMessage: Message = {
+        id: uuidv4(),
+        content: "I'll help evaluate your organization's AI readiness through a series of questions. This assessment will be personalized based on your industry and data. Let's begin!",
+        role: 'assistant',
+        timestamp: new Date()
+      };
+      
+      setMessages([initialMessage]);
+      
       toast({
         title: "AI Readiness Evaluation Mode Activated",
         description: "I'll ask questions to assess your organization's AI readiness.",
@@ -61,36 +84,28 @@ export const useChat = () => {
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return;
-    
-    if (!apiKey) {
-      toast({
-        title: "API Key Required",
-        description: "Please set your OpenAI API key in the settings tab.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!knowledgeBase.isLoaded) {
-      toast({
-        title: "Knowledge Base Required",
-        description: "Please upload at least one file to create a knowledge base.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
+
+    // Add user message
     const userMessage: Message = {
       id: uuidv4(),
       content,
       role: 'user',
       timestamp: new Date()
     };
-    
+
     setMessages(prev => [...prev, userMessage]);
     setLoading(true);
-    
+
     try {
+      // Validate API key before proceeding
+      if (!apiKey) {
+        throw new Error('Please set your OpenAI API key in settings');
+      }
+
+      if (!apiKey.startsWith('sk-') || apiKey.length < 40) {
+        throw new Error('Invalid API key format. The key should start with "sk-" and be at least 40 characters long');
+      }
+
       // Add a small processing message to improve UX
       const processingMessage: Message = {
         id: uuidv4(),
@@ -117,38 +132,68 @@ export const useChat = () => {
       
       setMessages(prev => [...prev, botMessage]);
       
-      // Check for error messages in the response and show toasts for better UX
-      if (response.includes("I'm having trouble processing your request due to the size")) {
+      // Show appropriate toasts based on response content
+      if (response.includes("API key")) {
         toast({
-          title: "Knowledge Base Too Large",
-          description: "Try uploading smaller files or asking a more specific question.",
+          title: "API Key Issue",
+          description: "Please check your OpenAI API key in settings.",
           variant: "destructive",
         });
-      } else if (response.includes("invalid_api_key") || response.includes("The API key appears to be invalid")) {
+      } else if (response.includes("rate limit")) {
         toast({
-          title: "Invalid API Key",
-          description: "Please check your OpenAI API key in settings.",
+          title: "Rate Limit Reached",
+          description: "Please wait a moment before trying again.",
+          variant: "destructive",
+        });
+      } else if (response.includes("internet connection")) {
+        toast({
+          title: "Connection Error",
+          description: "Please check your internet connection.",
           variant: "destructive",
         });
       }
     } catch (error) {
       console.error('Error sending message:', error);
       
+      let errorMessage = "An error occurred while processing your request.";
+      let toastTitle = "Error";
+      let toastDescription = "Failed to get a response. Please try again.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('API key')) {
+          errorMessage = "Please set a valid OpenAI API key in settings.";
+          toastTitle = "API Key Required";
+          toastDescription = "Check your API key configuration.";
+        } else if (error.message.includes('fetch')) {
+          errorMessage = "Unable to connect to OpenAI. Please check your internet connection.";
+          toastTitle = "Connection Error";
+          toastDescription = "Check your internet connection and try again.";
+        }
+      }
+      
       toast({
-        title: "Error",
-        description: "Failed to get a response. Please try again with a more specific question.",
+        title: toastTitle,
+        description: toastDescription,
         variant: "destructive",
       });
       
       // Add an error message in the chat
-      const errorMessage: Message = {
+      const errorMsg: Message = {
         id: uuidv4(),
-        content: "Sorry, I encountered an error processing your request. Please try with a more specific question or check your API key.",
+        content: errorMessage,
         role: 'assistant',
         timestamp: new Date()
       };
       
-      setMessages(prev => [...prev, errorMessage]);
+      // Remove temporary messages and add the error message
+      setMessages(prev => {
+        // Keep all user messages and non-temporary assistant messages
+        const filteredMessages = prev.filter(m => 
+          m.role === 'user' || 
+          (m.role === 'assistant' && !m.content.includes("Analyzing your response") && !m.content.includes("Searching knowledge base"))
+        );
+        return [...filteredMessages, errorMsg];
+      });
     } finally {
       setLoading(false);
     }

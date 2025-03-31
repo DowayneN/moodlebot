@@ -1,10 +1,9 @@
-
 // Text processing functions for chunking and embedding-based retrieval
 
 /**
  * Splits a text into chunks of roughly equal size
  */
-export const chunkText = (text: string, chunkSize: number = 1000): string[] => {
+export const chunkText = (text: string, chunkSize: number = 500): string[] => {
   if (!text || text.length <= chunkSize) return [text];
   
   const chunks: string[] = [];
@@ -12,9 +11,31 @@ export const chunkText = (text: string, chunkSize: number = 1000): string[] => {
   let currentChunk = '';
   
   for (const sentence of sentences) {
+    // If the sentence itself is longer than chunkSize, split it into smaller pieces
+    if (sentence.length > chunkSize) {
+      const words = sentence.split(/\s+/);
+      let currentPiece = '';
+      
+      for (const word of words) {
+        if ((currentPiece + ' ' + word).length > chunkSize) {
+          if (currentPiece) {
+            chunks.push(currentPiece.trim());
+          }
+          currentPiece = word;
+        } else {
+          currentPiece += (currentPiece ? ' ' : '') + word;
+        }
+      }
+      
+      if (currentPiece) {
+        chunks.push(currentPiece.trim());
+      }
+      continue;
+    }
+    
     // If adding this sentence would make the chunk too big, start a new chunk
     if (currentChunk.length + sentence.length > chunkSize && currentChunk.length > 0) {
-      chunks.push(currentChunk);
+      chunks.push(currentChunk.trim());
       currentChunk = '';
     }
     
@@ -23,7 +44,7 @@ export const chunkText = (text: string, chunkSize: number = 1000): string[] => {
   
   // Add the last chunk if it's not empty
   if (currentChunk) {
-    chunks.push(currentChunk);
+    chunks.push(currentChunk.trim());
   }
   
   return chunks;
